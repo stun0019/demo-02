@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#173749" />
+  <title>Tiny Kingdoms｜王國前線</title>
+  <style>
+    :root {
+      --ink: #173749;
+      --cream: #fff2cf;
+      --cream-2: #ead7a6;
+      --blue: #3e92a3;
+      --blue-dark: #236272;
+      --red: #c95b58;
+      --red-dark: #8f3738;
+      --gold: #f3c45b;
+      --shadow: rgba(17, 42, 52, .35);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #102733;
+      color: var(--ink);
+      font-family: "Microsoft JhengHei", "Noto Sans TC", system-ui, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      background:
+        radial-gradient(circle at 50% 35%, #315a65 0 18%, transparent 45%),
+        linear-gradient(145deg, #102733, #07171e);
+    }
+
+    button { font: inherit; }
+
+    .game-shell {
+      position: relative;
+      width: min(100vw - 16px, calc((100vh - 16px) * 16 / 9));
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border: clamp(3px, .45vw, 7px) solid #d8c28b;
+      border-radius: clamp(12px, 1.8vw, 25px);
+      background: #83b65d;
+      box-shadow: 0 24px 70px rgba(0,0,0,.5), inset 0 0 0 3px #40606a;
+      isolation: isolate;
+    }
+
+    .battlefield {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 15% 30%, rgba(222,235,112,.7) 0 4%, transparent 15%),
+        radial-gradient(ellipse at 77% 78%, rgba(52,126,75,.2) 0 8%, transparent 23%),
+        repeating-linear-gradient(20deg, rgba(255,255,255,.035) 0 3px, transparent 3px 20px),
+        #82b85e;
+    }
+
+    .battlefield::before {
+      content: "";
+      position: absolute;
+      left: -5%;
+      top: 49%;
+      width: 110%;
+      height: 28%;
+      transform: translateY(-50%) rotate(-1.5deg);
+      background: #d3aa67;
+      border-block: clamp(6px, .7vw, 12px) solid rgba(87,112,60,.35);
+      box-shadow: inset 0 0 25px rgba(107,72,34,.18);
+      clip-path: polygon(0 22%, 11% 9%, 24% 20%, 38% 4%, 52% 16%, 67% 2%, 81% 19%, 100% 8%, 100% 85%, 83% 96%, 68% 79%, 50% 96%, 36% 80%, 20% 98%, 0 78%);
+    }
+
+    .water {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -4%;
+      height: 17%;
+      opacity: .9;
+      background: url("assets/terrain/Tileset/Water Background color.png") repeat;
+      background-size: clamp(38px, 5vw, 72px);
+      border-top: clamp(4px, .5vw, 9px) solid rgba(229,244,196,.65);
+      box-shadow: 0 -5px 0 rgba(66,130,121,.35);
+    }
+
+    .decor {
+      position: absolute;
+      z-index: 1;
+      object-fit: contain;
+      pointer-events: none;
+      image-rendering: auto;
+      filter: drop-shadow(0 7px 3px rgba(30,58,42,.2));
+    }
+
+    .bush-a { width: 8%; left: 38%; top: 17%; }
+    .bush-b { width: 7%; left: 66%; top: 69%; transform: scaleX(-1); }
+    .rock-a { width: 5.5%; left: 47%; top: 72%; }
+    .rock-b { width: 5%; left: 73%; top: 19%; transform: rotate(8deg); }
+
+    .base {
+      position: absolute;
+      z-index: 4;
+      top: 36%;
+      width: 20%;
+      transform: translateY(-50%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .base.blue { left: 1.7%; }
+    .base.red { right: 1.7%; }
+
+    .castle {
+      display: block;
+      width: 100%;
+      filter: drop-shadow(0 9px 4px rgba(20,45,46,.32));
+    }
+
+    .base-name {
+      position: absolute;
+      left: 50%;
+      bottom: -3%;
+      transform: translateX(-50%);
+      padding: .25em .75em;
+      border: 2px solid #fff0c8;
+      border-radius: 999px;
+      background: var(--blue-dark);
+      color: white;
+      font-size: clamp(8px, 1.15vw, 16px);
+      font-weight: 900;
+      white-space: nowrap;
+      box-shadow: 0 3px 0 rgba(22,55,73,.35);
+    }
+
+    .red .base-name { background: var(--red-dark); }
+
+    .hp-track {
+      position: absolute;
+      left: 13%;
+      right: 13%;
+      bottom: -11%;
+      height: clamp(7px, .8vw, 12px);
+      padding: 2px;
+      overflow: hidden;
+      border: 2px solid #193c49;
+      border-radius: 999px;
+      background: #fff2cf;
+    }
+
+    .hp-fill {
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(#73d16b, #3a9a52);
+      transition: width .2s ease;
+    }
+
+    .resource-node {
+      position: absolute;
+      z-index: 3;
+      width: 10%;
+      pointer-events: none;
+    }
+
+    .resource-node img { width: 100%; display: block; filter: drop-shadow(0 8px 3px rgba(25,55,42,.25)); }
+    .resource-node span {
+      position: absolute;
+      left: 50%;
+      bottom: -7%;
+      translate: -50% 0;
+      padding: .15em .6em;
+      border-radius: 99px;
+      background: rgba(24,57,62,.78);
+      color: #fff4cf;
+      font-size: clamp(7px, .85vw, 12px);
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .trees { left: 22%; top: 13%; width: 15%; overflow: hidden; }
+    .trees img { width: 600%; max-width: none; animation: treeSway 2.2s steps(6) infinite; }
+    .gold-mine { left: 24%; top: 68%; width: 7.5%; }
+    .sheep-pen { left: 13%; top: 69%; width: 8.5%; overflow: hidden; }
+    .sheep-pen img { width: 600%; max-width: none; animation: treeSway 1.5s steps(6) infinite; }
+
+    @keyframes treeSway { to { transform: translateX(-100%); } }
+
+    .worker {
+      position: absolute;
+      z-index: 5;
+      width: clamp(42px, 7.4%, 92px);
+      aspect-ratio: 1;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .worker .sprite { width: 600%; height: 100%; background-size: contain; animation: workerFrames .6s steps(6) infinite; }
+    .worker.wood { top: 30%; animation: gatherWood 5.2s ease-in-out infinite alternate; }
+    .worker.gold { top: 63%; animation: gatherGold 6s ease-in-out infinite alternate; }
+
+    @keyframes workerFrames { to { transform: translateX(-100%); } }
+    @keyframes gatherWood { from { left: 15%; } to { left: 23%; } }
+    @keyframes gatherGold { from { left: 15%; } to { left: 23%; } }
+
+    .unit-layer { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
+
+    .unit {
+      position: absolute;
+      width: clamp(48px, 7.6%, 96px);
+      aspect-ratio: 1;
+      translate: -50% -50%;
+      will-change: left, top;
+    }
+
+    .unit-sprite {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      filter: drop-shadow(0 5px 2px rgba(20,43,43,.25));
+    }
+
+    .unit-sprite::before {
+      content: "";
+      position: absolute;
+      width: calc(var(--frames) * 100%);
+      height: 100%;
+      left: 0;
+      top: 0;
+      background: var(--sprite) left center / 100% 100% no-repeat;
+      animation: unitFrames var(--duration, .65s) steps(var(--frames)) infinite;
+    }
+
+    .unit.red-team .unit-sprite { transform: scaleX(-1); }
+    .unit.attacking .unit-sprite { animation: bump .25s ease-in-out infinite alternate; }
+
+    @keyframes unitFrames { to { transform: translateX(-100%); } }
+    @keyframes bump { to { translate: 5% 0; } }
+
+    .unit-hp {
+      position: absolute;
+      left: 20%;
+      right: 20%;
+      top: 10%;
+      height: clamp(3px, .35vw, 6px);
+      overflow: hidden;
+      border: 1px solid rgba(18,48,55,.75);
+      border-radius: 8px;
+      background: rgba(255,238,198,.8);
+      opacity: 0;
+    }
+
+    .unit.damaged .unit-hp { opacity: 1; }
+    .unit-hp > i { display: block; width: 100%; height: 100%; background: #58bd5e; }
+
+    .projectile {
+      position: absolute;
+      z-index: 8;
+      width: clamp(18px, 2.2vw, 31px);
+      height: clamp(8px, 1vw, 14px);
+      background: url("assets/units/Blue Units/Archer/Arrow.png") center / contain no-repeat;
+      filter: drop-shadow(0 2px 1px rgba(0,0,0,.25));
+      transition: left .22s linear, top .22s linear;
+    }
+
+    .projectile.red-arrow { transform: scaleX(-1); }
+
+    .hud {
+      position: absolute;
+      z-index: 30;
+      left: 1.3%;
+      right: 1.3%;
+      top: 1.5%;
+      height: 11%;
+      display: flex;
+      align-items: center;
+      gap: 1%;
+      pointer-events: none;
+    }
+
+    .brand {
+      align-self: stretch;
+      display: flex;
+      align-items: center;
+      gap: .55em;
+      min-width: 24%;
+      padding: 0 1.1em;
+      border: clamp(2px, .25vw, 4px) solid #173f4e;
+      border-radius: clamp(8px, 1vw, 14px);
+      background: linear-gradient(#fff2cf, #ead49d);
+      box-shadow: 0 clamp(3px, .4vw, 6px) 0 #967749;
+    }
+
+    .brand img { width: clamp(25px, 4vw, 57px); height: clamp(25px, 4vw, 57px); object-fit: contain; }
+    .brand strong { display: block; color: #214b5c; font-size: clamp(9px, 1.6vw, 23px); line-height: 1; letter-spacing: .06em; }
+    .brand small { color: #91713e; font-size: clamp(6px, .72vw, 10px); font-weight: 900; }
+
+    .resources {
+      display: flex;
+      gap: .55em;
+      flex: 1;
+      height: 76%;
+    }
+
+    .resource-pill {
+      display: flex;
+      align-items: center;
+      gap: .35em;
+      min-width: 0;
+      padding: 0 .75em;
+      border: clamp(2px, .2vw, 3px) solid #315967;
+      border-radius: 999px;
+      background: rgba(255,242,207,.94);
+      box-shadow: 0 3px 0 rgba(53,81,82,.4);
+      font-size: clamp(8px, 1.12vw, 16px);
+      font-weight: 1000;
+    }
+
+    .resource-pill b { min-width: 2.2ch; }
+    .resource-pill em { font-style: normal; font-size: 1.2em; }
+    .resource-pill.gain { animation: gain .35s ease-out; }
+    @keyframes gain { 50% { transform: scale(1.12); background: #fff4a9; } }
+
+    .wave-box {
+      height: 78%;
+      display: grid;
+      place-items: center;
+      min-width: 16%;
+      padding: 0 .8em;
+      border: clamp(2px, .22vw, 3px) solid #6e4535;
+      border-radius: clamp(7px, .8vw, 12px);
+      background: linear-gradient(#d56b60, #a94142);
+      color: white;
+      box-shadow: 0 4px 0 #6c3437;
+      font-weight: 1000;
+      line-height: 1.05;
+      text-align: center;
+      text-shadow: 0 2px 0 rgba(80,33,34,.4);
+    }
+
+    .wave-box span { display: block; font-size: clamp(8px, 1vw, 14px); }
+    .wave-box small { display: block; margin-top: .15em; color: #ffe8b4; font-size: clamp(6px, .72vw, 10px); }
+
+    .icon-button {
+      width: clamp(30px, 5vw, 68px);
+      aspect-ratio: 1;
+      border: clamp(2px, .25vw, 4px) solid #244f5e;
+      border-radius: 50%;
+      background: #fff1ca;
+      color: #244f5e;
+      box-shadow: 0 4px 0 #826841;
+      font-size: clamp(11px, 1.7vw, 24px);
+      font-weight: 1000;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .icon-button:active { translate: 0 3px; box-shadow: 0 1px 0 #826841; }
+
+    .command-panel {
+      position: absolute;
+      z-index: 35;
+      left: 50%;
+      bottom: 1.5%;
+      width: min(73%, 900px);
+      height: 20.5%;
+      translate: -50% 0;
+      display: flex;
+      align-items: stretch;
+      gap: 1.2%;
+      padding: 1.1% 1.3%;
+      border: clamp(3px, .45vw, 7px) solid #5f4029;
+      border-radius: clamp(10px, 1.3vw, 19px);
+      background:
+        linear-gradient(rgba(255,255,255,.09), transparent 25%),
+        repeating-linear-gradient(90deg, #9d6336 0 16%, #89552f 16% 17%);
+      box-shadow: 0 7px 0 #3f2c22, 0 14px 22px rgba(25,43,40,.3), inset 0 0 0 3px #c89454;
+    }
+
+    .panel-title {
+      width: 18%;
+      display: grid;
+      place-content: center;
+      color: #fff1c5;
+      text-align: center;
+      text-shadow: 0 2px 0 #4e2c1f;
+    }
+
+    .panel-title strong { font-size: clamp(9px, 1.35vw, 19px); }
+    .panel-title small { margin-top: .35em; font-size: clamp(6px, .65vw, 9px); color: #efcb8c; }
+
+    .unit-card {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      border: clamp(2px, .25vw, 4px) solid #203f4a;
+      border-radius: clamp(7px, .9vw, 13px);
+      background: linear-gradient(#fff3d0, #e8d49d);
+      color: #173749;
+      box-shadow: 0 4px 0 #5a3d27;
+      cursor: pointer;
+      transition: filter .15s, transform .15s;
+    }
+
+    .unit-card:hover { filter: brightness(1.07); transform: translateY(-2px); }
+    .unit-card:active { transform: translateY(3px); box-shadow: 0 1px 0 #5a3d27; }
+    .unit-card:disabled { filter: grayscale(.8) brightness(.75); cursor: not-allowed; }
+
+    .portrait {
+      position: absolute;
+      left: 2%;
+      top: -5%;
+      width: 57%;
+      aspect-ratio: 1;
+      overflow: hidden;
+    }
+
+    .portrait::before {
+      content: "";
+      position: absolute;
+      width: calc(var(--frames) * 100%);
+      height: 100%;
+      background: var(--portrait) left center / 100% 100% no-repeat;
+    }
+
+    .unit-card strong {
+      position: absolute;
+      right: 7%;
+      top: 12%;
+      font-size: clamp(8px, 1.05vw, 15px);
+      writing-mode: vertical-rl;
+      letter-spacing: .12em;
+    }
+
+    .cost {
+      position: absolute;
+      left: 5%;
+      right: 5%;
+      bottom: 7%;
+      padding: .2em .3em;
+      border-radius: 99px;
+      background: #244d5b;
+      color: white;
+      font-size: clamp(6px, .75vw, 11px);
+      font-weight: 900;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .toast {
+      position: absolute;
+      z-index: 50;
+      left: 50%;
+      top: 15%;
+      translate: -50% -15px;
+      opacity: 0;
+      padding: .55em 1.2em;
+      border: 3px solid #684a2e;
+      border-radius: 999px;
+      background: #fff0c6;
+      box-shadow: 0 5px 0 rgba(82,54,35,.55);
+      color: #68402e;
+      font-size: clamp(9px, 1.2vw, 17px);
+      font-weight: 1000;
+      pointer-events: none;
+      transition: .25s ease;
+    }
+
+    .toast.show { opacity: 1; translate: -50% 0; }
+
+    .overlay {
+      position: absolute;
+      z-index: 100;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(11,33,42,.74);
+      backdrop-filter: blur(4px);
+    }
+
+    .overlay[hidden] { display: none; }
+
+    .result-card {
+      width: min(62%, 620px);
+      padding: 4% 5%;
+      border: clamp(4px, .55vw, 8px) solid #315766;
+      border-radius: clamp(14px, 2vw, 28px);
+      background: linear-gradient(#fff3d0, #e6cf95);
+      box-shadow: 0 12px 0 #80613d, 0 25px 70px rgba(0,0,0,.4);
+      text-align: center;
+    }
+
+    .result-card h2 { margin: 0 0 .25em; font-size: clamp(20px, 4vw, 56px); color: #234c5b; }
+    .result-card p { margin: 0 0 1.3em; font-size: clamp(9px, 1.3vw, 18px); font-weight: 800; }
+    .restart {
+      border: 3px solid #204957;
+      border-radius: 999px;
+      padding: .65em 2.2em;
+      background: linear-gradient(#55a8b4, #338394);
+      color: white;
+      box-shadow: 0 5px 0 #1f5b68;
+      font-size: clamp(10px, 1.4vw, 20px);
+      font-weight: 1000;
+      cursor: pointer;
+    }
+
+    .rotate-hint {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      inset: 0;
+      place-items: center;
+      padding: 12vw;
+      background: #102733;
+      color: #fff2cf;
+      text-align: center;
+      font-weight: 900;
+    }
+
+    .rotate-hint span { display: block; font-size: 48px; margin-bottom: 16px; }
+
+    @media (orientation: portrait) and (max-width: 800px) {
+      .rotate-hint { display: grid; }
+    }
+
+    @media (max-height: 500px) {
+      body { padding: 2px; }
+      .game-shell { width: min(100vw - 4px, calc((100vh - 4px) * 16 / 9)); }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell" aria-label="王國前線遊戲區">
+    <section class="battlefield" id="battlefield">
+      <div class="water"></div>
+
+      <img class="decor bush-a" src="assets/terrain/Decorations/Bushes/Bushe2.png" alt="" />
+      <img class="decor bush-b" src="assets/terrain/Decorations/Bushes/Bushe4.png" alt="" />
+      <img class="decor rock-a" src="assets/terrain/Decorations/Rocks/Rock2.png" alt="" />
+      <img class="decor rock-b" src="assets/terrain/Decorations/Rocks/Rock4.png" alt="" />
+
+      <div class="resource-node trees">
+        <img src="assets/terrain/Resources/Wood/Trees/Tree1.png" alt="樹林" />
+        <span>木材林</span>
+      </div>
+      <div class="resource-node sheep-pen">
+        <img src="assets/terrain/Resources/Meat/Sheep/Sheep_Idle.png" alt="牧場" />
+        <span>牧場</span>
+      </div>
+      <div class="resource-node gold-mine">
+        <img src="assets/terrain/Resources/Gold/Gold Stones/Gold Stone 2.png" alt="金礦" />
+        <span>金礦</span>
+      </div>
+
+      <div class="worker wood"><div class="sprite" style="background:url('assets/units/Blue Units/Pawn/Pawn_Run Wood.png') left center / 100% 100% no-repeat"></div></div>
+      <div class="worker gold"><div class="sprite" style="background:url('assets/units/Blue Units/Pawn/Pawn_Run Gold.png') left center / 100% 100% no-repeat"></div></div>
+
+      <div class="base blue">
+        <img class="castle" src="assets/buildings/Blue Buildings/Castle.png" alt="我方城堡" />
+        <span class="base-name">海風王國</span>
+        <div class="hp-track"><div class="hp-fill" id="blueHp"></div></div>
+      </div>
+
+      <div class="base red">
+        <img class="castle" src="assets/buildings/Red Buildings/Castle.png" alt="敵方城堡" />
+        <span class="base-name">赤焰軍團</span>
+        <div class="hp-track"><div class="hp-fill" id="redHp"></div></div>
+      </div>
+
+      <div class="unit-layer" id="unitLayer"></div>
+    </section>
+
+    <header class="hud">
+      <div class="brand">
+        <img src="assets/ui/UI Elements/Swords/Swords.png" alt="" />
+        <div><strong>TINY KINGDOMS</strong><small>王國前線</small></div>
+      </div>
+      <div class="resources" aria-label="資源">
+        <div class="resource-pill" id="woodPill"><em>🪵</em><b id="wood">120</b></div>
+        <div class="resource-pill" id="goldPill"><em>🪙</em><b id="gold">100</b></div>
+        <div class="resource-pill" id="foodPill"><em>🍖</em><b id="food">130</b></div>
+      </div>
+      <div class="wave-box"><span id="waveLabel">第 1 波</span><small id="waveTimer">敵軍 12 秒後抵達</small></div>
+      <button class="icon-button" id="pauseButton" aria-label="暫停遊戲">Ⅱ</button>
+    </header>
+
+    <nav class="command-panel" aria-label="招募部隊">
+      <div class="panel-title"><strong>招募部隊</strong><small>點選兵種投入戰線</small></div>
+      <button class="unit-card" data-unit="warrior" aria-label="招募戰士">
+        <span class="portrait" style="--frames:8;--portrait:url('assets/units/Blue Units/Warrior/Warrior_Idle.png')"></span>
+        <strong>戰士</strong><span class="cost">🍖30 🪙20</span>
+      </button>
+      <button class="unit-card" data-unit="archer" aria-label="招募弓箭手">
+        <span class="portrait" style="--frames:6;--portrait:url('assets/units/Blue Units/Archer/Archer_Idle.png')"></span>
+        <strong>弓手</strong><span class="cost">🍖25 🪵30</span>
+      </button>
+      <button class="unit-card" data-unit="lancer" aria-label="招募長槍兵">
+        <span class="portrait" style="--frames:12;--portrait:url('assets/units/Blue Units/Lancer/Lancer_Idle.png')"></span>
+        <strong>槍兵</strong><span class="cost">🍖40 🪙35</span>
+      </button>
+      <button class="unit-card" data-unit="monk" aria-label="招募僧侶">
+        <span class="portrait" style="--frames:6;--portrait:url('assets/units/Blue Units/Monk/Idle.png')"></span>
+        <strong>僧侶</strong><span class="cost">🍖35 🪙40</span>
+      </button>
+    </nav>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="overlay" id="resultOverlay" hidden>
+      <div class="result-card">
+        <h2 id="resultTitle">勝利！</h2>
+        <p id="resultText">海風王國守住了前線。</p>
+        <button class="restart" id="restartButton">再戰一局</button>
+      </div>
+    </div>
+  </main>
+
+  <aside class="rotate-hint"><div><span>↻</span>請將手機轉為橫向<br />以獲得完整戰場視野</div></aside>
+
+  <script>
+    (() => {
+      const battlefield = document.querySelector('#battlefield');
+      const unitLayer = document.querySelector('#unitLayer');
+      const toast = document.querySelector('#toast');
+      const pauseButton = document.querySelector('#pauseButton');
+      const resultOverlay = document.querySelector('#resultOverlay');
+      const cards = [...document.querySelectorAll('.unit-card')];
+
+      const unitTypes = {
+        warrior: { label: '戰士', hp: 125, speed: 4.6, damage: 19, range: 4.5, cooldown: 720, frames: 6, run: 'Warrior/Warrior_Run.png', cost: { food: 30, gold: 20 } },
+        archer:  { label: '弓箭手', hp: 75, speed: 4.1, damage: 14, range: 17, cooldown: 900, frames: 4, run: 'Archer/Archer_Run.png', cost: { food: 25, wood: 30 }, ranged: true },
+        lancer: { label: '長槍兵', hp: 165, speed: 3.5, damage: 23, range: 6.5, cooldown: 980, frames: 6, run: 'Lancer/Lancer_Run.png', cost: { food: 40, gold: 35 } },
+        monk:    { label: '僧侶', hp: 85, speed: 3.7, damage: 8, range: 12, cooldown: 1100, frames: 6, run: 'Monk/Run.png', cost: { food: 35, gold: 40 }, healer: true }
+      };
+
+      let state;
+      let nextUnitId = 1;
+      let toastTimer;
+      let lastTime = performance.now();
+      let waveClock = 12;
+      let gatherClocks = { wood: 0, gold: 0, food: 0 };
+
+      function resetGame() {
+        unitLayer.innerHTML = '';
+        state = {
+          resources: { wood: 120, gold: 100, food: 130 },
+          baseHp: { blue: 1000, red: 1000 },
+          units: [],
+          wave: 1,
+          paused: false,
+          ended: false
+        };
+        nextUnitId = 1;
+        waveClock = 12;
+        gatherClocks = { wood: 0, gold: 0, food: 0 };
+        resultOverlay.hidden = true;
+        pauseButton.textContent = 'Ⅱ';
+        updateHud();
+        spawnUnit('blue', 'warrior', 18, 47);
+        spawnUnit('red', 'warrior', 82, 53);
+        showToast('工人開始採集，準備守住前線！');
+      }
+
+      function assetFor(team, type) {
+        const color = team === 'blue' ? 'Blue' : 'Red';
+        return `assets/units/${color} Units/${unitTypes[type].run}`;
+      }
+
+      function spawnUnit(team, type, x = team === 'blue' ? 17 : 83, y) {
+        const spec = unitTypes[type];
+        const laneY = y ?? (43 + Math.random() * 18);
+        const el = document.createElement('div');
+        el.className = `unit ${team === 'red' ? 'red-team' : ''}`;
+        el.innerHTML = `<div class="unit-sprite" style="--frames:${spec.frames};--duration:${type === 'lancer' ? '.8s' : '.62s'};--sprite:url('${assetFor(team, type)}')"></div><div class="unit-hp"><i></i></div>`;
+        unitLayer.append(el);
+        const unit = {
+          id: nextUnitId++, team, type, el, x, y: laneY,
+          hp: spec.hp, maxHp: spec.hp,
+          nextAttack: 0, targetId: null
+        };
+        state.units.push(unit);
+        placeUnit(unit);
+        return unit;
+      }
+
+      function recruit(type) {
+        if (state.paused || state.ended) return;
+        const cost = unitTypes[type].cost;
+        const lacking = Object.keys(cost).find(key => state.resources[key] < cost[key]);
+        if (lacking) {
+          showToast(`${lacking === 'wood' ? '木材' : lacking === 'gold' ? '金幣' : '食物'}不足，工人還在努力採集！`);
+          return;
+        }
+        Object.entries(cost).forEach(([key, value]) => state.resources[key] -= value);
+        spawnUnit('blue', type);
+        showToast(`${unitTypes[type].label}已加入戰線`);
+        updateHud();
+      }
+
+      function spawnWave() {
+        const count = Math.min(2 + state.wave, 8);
+        const roster = ['warrior', 'archer', 'lancer'];
+        for (let i = 0; i < count; i++) {
+          setTimeout(() => {
+            if (!state.ended) spawnUnit('red', roster[(i + state.wave) % roster.length], 84 + Math.random() * 2, 42 + (i % 3) * 7 + Math.random() * 2);
+          }, i * 350);
+        }
+        showToast(`第 ${state.wave} 波敵軍來襲！`);
+        state.wave += 1;
+        waveClock = Math.max(10, 20 - state.wave * .8);
+      }
+
+      function updateUnits(time, delta) {
+        const alive = state.units.filter(u => u.hp > 0);
+        for (const unit of alive) {
+          const spec = unitTypes[unit.type];
+          const enemies = alive.filter(other => other.team !== unit.team);
+          const target = enemies.reduce((best, enemy) => {
+            const d = Math.hypot(enemy.x - unit.x, (enemy.y - unit.y) * .7);
+            return !best || d < best.d ? { unit: enemy, d } : best;
+          }, null);
+
+          if (spec.healer) {
+            const wounded = alive
+              .filter(other => other.team === unit.team && other.id !== unit.id && other.hp < other.maxHp)
+              .sort((a, b) => Math.abs(a.x - unit.x) - Math.abs(b.x - unit.x))[0];
+            if (wounded && Math.abs(wounded.x - unit.x) < spec.range && time >= unit.nextAttack) {
+              wounded.hp = Math.min(wounded.maxHp, wounded.hp + 22);
+              unit.nextAttack = time + spec.cooldown;
+              unit.el.classList.add('attacking');
+              setTimeout(() => unit.el?.classList.remove('attacking'), 260);
+              updateUnitHp(wounded);
+              continue;
+            }
+          }
+
+          const enemyBaseX = unit.team === 'blue' ? 88 : 12;
+          const distanceToBase = Math.abs(enemyBaseX - unit.x);
+          const inUnitRange = target && target.d <= spec.range;
+          const inBaseRange = distanceToBase <= spec.range + 2;
+
+          if ((inUnitRange || inBaseRange) && time >= unit.nextAttack) {
+            unit.nextAttack = time + spec.cooldown;
+            unit.el.classList.add('attacking');
+            setTimeout(() => unit.el?.classList.remove('attacking'), 250);
+            if (inUnitRange) attackUnit(unit, target.unit, spec);
+            else attackBase(unit, spec.damage);
+          } else if (!inUnitRange && !inBaseRange) {
+            const direction = unit.team === 'blue' ? 1 : -1;
+            unit.x += direction * spec.speed * delta;
+            if (target && Math.abs(target.y - unit.y) > 4) unit.y += Math.sign(target.y - unit.y) * 1.2 * delta;
+            placeUnit(unit);
+          }
+        }
+
+        state.units = state.units.filter(unit => {
+          if (unit.hp > 0) return true;
+          unit.el.style.opacity = '0';
+          unit.el.style.transform = 'scale(.5)';
+          setTimeout(() => unit.el.remove(), 180);
+          return false;
+        });
+      }
+
+      function attackUnit(attacker, target, spec) {
+        if (spec.ranged) launchArrow(attacker, target);
+        target.hp -= spec.damage;
+        target.el.classList.add('damaged');
+        updateUnitHp(target);
+      }
+
+      function attackBase(unit, damage) {
+        const enemyTeam = unit.team === 'blue' ? 'red' : 'blue';
+        state.baseHp[enemyTeam] = Math.max(0, state.baseHp[enemyTeam] - damage);
+        updateHud();
+        if (state.baseHp[enemyTeam] <= 0) endGame(enemyTeam === 'red');
+      }
+
+      function launchArrow(attacker, target) {
+        const arrow = document.createElement('div');
+        arrow.className = `projectile ${attacker.team === 'red' ? 'red-arrow' : ''}`;
+        arrow.style.left = `${attacker.x}%`;
+        arrow.style.top = `${attacker.y}%`;
+        unitLayer.append(arrow);
+        requestAnimationFrame(() => {
+          arrow.style.left = `${target.x}%`;
+          arrow.style.top = `${target.y}%`;
+        });
+        setTimeout(() => arrow.remove(), 260);
+      }
+
+      function updateUnitHp(unit) {
+        const fill = unit.el.querySelector('.unit-hp i');
+        fill.style.width = `${Math.max(0, unit.hp / unit.maxHp * 100)}%`;
+      }
+
+      function placeUnit(unit) {
+        unit.el.style.left = `${unit.x}%`;
+        unit.el.style.top = `${unit.y}%`;
+      }
+
+      function gather(delta) {
+        const rates = { wood: [4.2, 12], gold: [5.7, 10], food: [4.8, 14] };
+        Object.entries(rates).forEach(([key, [seconds, amount]]) => {
+          gatherClocks[key] += delta;
+          if (gatherClocks[key] >= seconds) {
+            gatherClocks[key] = 0;
+            state.resources[key] += amount;
+            const pill = document.querySelector(`#${key}Pill`);
+            pill.classList.remove('gain');
+            void pill.offsetWidth;
+            pill.classList.add('gain');
+            updateHud();
+          }
+        });
+      }
+
+      function updateHud() {
+        Object.keys(state.resources).forEach(key => document.querySelector(`#${key}`).textContent = state.resources[key]);
+        document.querySelector('#blueHp').style.width = `${state.baseHp.blue / 10}%`;
+        document.querySelector('#redHp').style.width = `${state.baseHp.red / 10}%`;
+        document.querySelector('#waveLabel').textContent = `第 ${state.wave} 波`;
+        document.querySelector('#waveTimer').textContent = `敵軍 ${Math.max(0, Math.ceil(waveClock))} 秒後抵達`;
+        cards.forEach(card => {
+          const cost = unitTypes[card.dataset.unit].cost;
+          card.disabled = Object.entries(cost).some(([key, value]) => state.resources[key] < value);
+        });
+      }
+
+      function showToast(message) {
+        clearTimeout(toastTimer);
+        toast.textContent = message;
+        toast.classList.add('show');
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
+      }
+
+      function endGame(victory) {
+        state.ended = true;
+        document.querySelector('#resultTitle').textContent = victory ? '守城成功！' : '城堡失守';
+        document.querySelector('#resultText').textContent = victory
+          ? `你抵擋了 ${Math.max(1, state.wave - 1)} 波攻勢，海風王國贏得勝利。`
+          : '重新分配資源與兵種，再守一次前線。';
+        resultOverlay.hidden = false;
+      }
+
+      function gameLoop(now) {
+        const delta = Math.min((now - lastTime) / 1000, .05);
+        lastTime = now;
+        if (!state.paused && !state.ended) {
+          waveClock -= delta;
+          gather(delta);
+          updateUnits(now, delta);
+          if (waveClock <= 0) spawnWave();
+          updateHud();
+        }
+        requestAnimationFrame(gameLoop);
+      }
+
+      cards.forEach(card => card.addEventListener('click', () => recruit(card.dataset.unit)));
+      pauseButton.addEventListener('click', () => {
+        if (state.ended) return;
+        state.paused = !state.paused;
+        pauseButton.textContent = state.paused ? '▶' : 'Ⅱ';
+        showToast(state.paused ? '戰場已暫停' : '戰鬥繼續');
+      });
+      document.querySelector('#restartButton').addEventListener('click', resetGame);
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && !state.ended) {
+          state.paused = true;
+          pauseButton.textContent = '▶';
+        }
+      });
+
+      resetGame();
+      requestAnimationFrame(gameLoop);
+    })();
+  </script>
+</body>
+</html>
